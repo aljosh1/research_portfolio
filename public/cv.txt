@@ -1,0 +1,24 @@
+YOUR NAME
+Software developer
+Your City, Country · hello@example.com
+https://github.com/yourusername · https://www.linkedin.com/in/yourusername
+
+PROFILE
+Software developer focused on building useful, accessible products from the first sketch to the final detail. Replace this summary with your own experience, strengths, and goals.
+
+EXPERIENCE
+Software developer · Your company · 2023–Present
+- Built and maintained customer-facing product features with a cross-functional team.
+- Replace these sample bullets with verified achievements and outcomes.
+
+Junior developer · Previous company · 2021–2023
+- Shipped responsive web experiences and collaborated closely with design and product.
+
+EDUCATION
+BSc, Computer Science · Your university · 2017–2021
+
+SKILLS
+TypeScript, JavaScript, Python, React, Next.js, Node.js, PostgreSQL, Git, Docker
+
+NOTE
+This is an editable text CV starter. Replace the sample details and upload your designed PDF when ready.
