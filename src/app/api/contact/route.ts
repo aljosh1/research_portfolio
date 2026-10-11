@@ -1,106 +1,43 @@
 import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { sendNotification } from "@/lib/email";
+import { rateLimit } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/utils";
+import { contactSchema } from "@/lib/validation";
+
+export const runtime = "nodejs";
+
+const invalid = (message = "Please check your details and try again.") =>
+  NextResponse.json({ message }, { status: 400 });
 
 export async function POST(request: Request) {
-  let payload: unknown;
+  const ip = clientIp(request.headers);
+  const limit = rateLimit(`contact:${ip}`, 5, 60 * 60 * 1000);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { message: "Too many messages from your network. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } },
+    );
+  }
 
+  let payload: unknown;
   try {
     payload = await request.json();
   } catch {
-    return NextResponse.json(
-      { message: "Please submit a valid message." },
-      { status: 400 },
-    );
+    return invalid();
   }
 
-  if (
-    typeof payload !== "object" ||
-    payload === null ||
-    Array.isArray(payload)
-  ) {
-    return NextResponse.json(
-      { message: "Please submit a valid message." },
-      { status: 400 },
-    );
-  }
-  const body = payload as Record<string, unknown>;
+  const parsed = contactSchema.safeParse(payload);
+  if (!parsed.success) return invalid(parsed.error.issues[0]?.message);
+  const { name, email, topic, message } = parsed.data;
 
-  if (typeof body.website === "string" && body.website.trim()) {
-    return NextResponse.json(
-      { message: "Please submit a valid message." },
-      { status: 400 },
-    );
-  }
+  await db.message.create({ data: { name, email, topic, message } });
+  await sendNotification({
+    subject: `[Academic website] ${topic} — ${name}`,
+    text: `From: ${name} <${email}>\nTopic: ${topic}\n\n${message}`,
+    replyTo: email,
+  });
 
-  const name = typeof body.name === "string" ? body.name.trim() : "";
-  const email = typeof body.email === "string" ? body.email.trim() : "";
-  const message = typeof body.message === "string" ? body.message.trim() : "";
-
-  if (
-    !name ||
-    name.length > 100 ||
-    /[\r\n]/.test(name) ||
-    !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email) ||
-    email.length > 254 ||
-    message.length < 10 ||
-    message.length > 5000
-  ) {
-    return NextResponse.json(
-      {
-        message: "Please check your name, email, and message, then try again.",
-      },
-      { status: 400 },
-    );
-  }
-
-  const apiKey = process.env.RESEND_API_KEY;
-  const recipient = process.env.CONTACT_TO;
-  const sender = process.env.CONTACT_FROM;
-
-  if (!apiKey || !recipient || !sender) {
-    return NextResponse.json(
-      {
-        message:
-          "The contact form is not configured yet. Please email me directly.",
-      },
-      { status: 503 },
-    );
-  }
-
-  let response: Response;
-  try {
-    response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: sender,
-        to: [recipient],
-        reply_to: email,
-        subject: "New portfolio message",
-        text: `From: ${name} <${email}>\n\n${message}`,
-      }),
-    });
-  } catch (error) {
-    console.error("Contact email provider request failed:", error);
-    return NextResponse.json(
-      {
-        message: "We couldn’t deliver your message. Please try again shortly.",
-      },
-      { status: 502 },
-    );
-  }
-
-  if (!response.ok) {
-    console.error("Contact email provider returned an error:", response.status);
-    return NextResponse.json(
-      {
-        message: "We couldn’t deliver your message. Please try again shortly.",
-      },
-      { status: 502 },
-    );
-  }
-
-  return NextResponse.json({ message: "Message sent successfully." });
+  // The enquiry is stored for the admin inbox even if email delivery is not configured.
+  return NextResponse.json({ message: "Thank you — your message has been received." });
 }

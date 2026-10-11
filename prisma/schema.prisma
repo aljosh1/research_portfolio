@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+}
+
+enum PublicationType {
+  JOURNAL_ARTICLE
+  CONFERENCE_PAPER
+  BOOK
+  EDITED_BOOK
+  BOOK_CHAPTER
+  REVIEW_ARTICLE
+  PREPRINT
+  TECHNICAL_REPORT
+  WORKING_PAPER
+  THESIS
+  PATENT
+  OTHER
+}
+
+enum PublicationStatus {
+  PUBLISHED
+  ACCEPTED
+  SUBMITTED
+  PREPRINT
+}
+
+enum ProjectStatus {
+  PLANNED
+  ONGOING
+  COMPLETED
+}
+
+enum TimelineKind {
+  QUALIFICATION
+  APPOINTMENT
+  TEACHING
+  AWARD
+  MEMBERSHIP
+  LEADERSHIP
+  SERVICE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(EDITOR)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Profile {
+  id                   String   @id @default("main")
+  fullName             String
+  title                String
+  department           String   @default("")
+  faculty              String   @default("")
+  university           String   @default("")
+  location             String   @default("")
+  headline             String
+  summary              String
+  biography            String   @default("")
+  teachingPhilosophy   String   @default("")
+  supervisionInterests String   @default("")
+  email                String   @default("")
+  phone                String   @default("")
+  availability         String   @default("")
+  keywords             String[]
+  researchInterests    String[]
+  portraitUrl          String   @default("")
+  cvUrl                String   @default("")
+  scholarUrl           String   @default("")
+  orcidUrl             String   @default("")
+  researchGateUrl      String   @default("")
+  linkedinUrl          String   @default("")
+  updatedAt            DateTime @updatedAt
+}
+
+model TimelineEntry {
+  id           String       @id @default(cuid())
+  kind         TimelineKind
+  title        String
+  organization String       @default("")
+  location     String       @default("")
+  startYear    Int?
+  endYear      Int?
+  current      Boolean      @default(false)
+  description  String       @default("")
+  sortOrder    Int          @default(0)
+  createdAt    DateTime     @default(now())
+
+  @@index([kind, sortOrder])
+}
+
+model Publication {
+  id            String            @id @default(cuid())
+  slug          String            @unique
+  title         String
+  authors       String[]
+  year          Int
+  type          PublicationType
+  status        PublicationStatus @default(PUBLISHED)
+  venue         String            @default("")
+  publisher     String            @default("")
+  volume        String            @default("")
+  issue         String            @default("")
+  pages         String            @default("")
+  articleNumber String            @default("")
+  doi           String            @default("")
+  isbn          String            @default("")
+  issn          String            @default("")
+  abstract      String            @default("")
+  keywords      String[]
+  subject       String            @default("")
+  externalUrl   String            @default("")
+  pdfUrl        String            @default("")
+  allowDownload Boolean           @default(false)
+  coverUrl      String            @default("")
+  featured      Boolean           @default(false)
+  openAccess    Boolean           @default(false)
+  license       String            @default("")
+  published     Boolean           @default(true)
+  searchText    String            @default("")
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([year])
+  @@index([type])
+  @@index([published, featured])
+}
+
+model Project {
+  id            String        @id @default(cuid())
+  slug          String        @unique
+  title         String
+  summary       String
+  description   String        @default("")
+  status        ProjectStatus @default(ONGOING)
+  startYear     Int?
+  endYear       Int?
+  funder        String        @default("")
+  collaborators String        @default("")
+  outcomes      String        @default("")
+  imageUrl      String        @default("")
+  imageAlt      String        @default("")
+  keywords      String[]
+  externalUrl   String        @default("")
+  featured      Boolean       @default(false)
+  published     Boolean       @default(true)
+  sortOrder     Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model NewsItem {
+  id        String   @id @default(cuid())
+  title     String
+  summary   String
+  body      String   @default("")
+  date      DateTime @default(now())
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([published, date])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  topic     String   @default("General")
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([read, createdAt])
+}

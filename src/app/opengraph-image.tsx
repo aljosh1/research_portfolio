@@ -1,80 +1,35 @@
 import { ImageResponse } from "next/og";
-import { profile } from "@/data/portfolio";
+import { getProfile } from "@/lib/queries";
 
-export const alt = `${profile.name} — ${profile.role}`;
+export const alt = "Academic portfolio";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+export const dynamic = "force-dynamic";
 
-export default function OpenGraphImage() {
+export default async function OpenGraphImage() {
+  const p = await getProfile();
   return new ImageResponse(
-    <div
-      style={{
-        display: "flex",
-        width: "100%",
-        height: "100%",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        padding: "74px 84px",
-        background: "#f5f4ef",
-        color: "#20231f",
-        fontFamily: "sans-serif",
-      }}
-    >
+    (
       <div
         style={{
           display: "flex",
-          alignItems: "center",
-          gap: 16,
-          fontSize: 22,
-          color: "#777a72",
-        }}
-      >
-        <span
-          style={{
-            display: "flex",
-            width: 45,
-            height: 45,
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: 30,
-            background: "#20231f",
-            color: "#f5f4ef",
-            fontSize: 21,
-            fontFamily: "serif",
-          }}
-        >
-          yn.
-        </span>
-        DEVELOPER · PORTFOLIO
-      </div>
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        <span style={{ fontSize: 74, fontWeight: 600, letterSpacing: -4 }}>
-          {profile.name}
-        </span>
-        <span
-          style={{
-            marginTop: 16,
-            maxWidth: 900,
-            color: "#777a72",
-            fontSize: 32,
-            lineHeight: 1.3,
-          }}
-        >
-          {profile.headline}
-        </span>
-      </div>
-      <div
-        style={{
-          display: "flex",
+          flexDirection: "column",
           justifyContent: "space-between",
-          color: "#ca6246",
-          fontSize: 20,
+          width: "100%",
+          height: "100%",
+          padding: "72px 84px",
+          background: "#12284a",
+          color: "#fff",
         }}
       >
-        <span>{profile.role}</span>
-        <span>{profile.siteUrl.replace(/^https?:\/\//, "")}</span>
+        <div style={{ fontSize: 24, letterSpacing: 4, color: "#d4ae60" }}>ACADEMIC PORTFOLIO</div>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <div style={{ fontSize: 76, fontWeight: 700 }}>{p.fullName}</div>
+          <div style={{ fontSize: 34, marginTop: 12, color: "#d4ae60" }}>{p.title}</div>
+          <div style={{ fontSize: 28, marginTop: 8, color: "#c4d0e6" }}>{p.university}</div>
+        </div>
       </div>
-    </div>,
+    ),
     size,
   );
 }

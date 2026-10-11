@@ -1,122 +1,85 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { ArrowUpRight, Check, Send } from "lucide-react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Send } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { contactSchema, contactTopics } from "@/lib/validation";
+import type { z } from "zod";
 
-type Status = { kind: "success" | "error"; message: string } | null;
+type Values = z.input<typeof contactSchema>;
 
-export function ContactForm({ email }: { email: string }) {
-  const [status, setStatus] = useState<Status>(null);
-  const [submitting, setSubmitting] = useState(false);
+export function ContactForm() {
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<Values>({
+    resolver: zodResolver(contactSchema),
+    defaultValues: { name: "", email: "", topic: contactTopics[0], message: "", website: "" },
+  });
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-    const values = Object.fromEntries(formData.entries());
-
-    setSubmitting(true);
+  async function onSubmit(values: Values) {
     setStatus(null);
-
     try {
-      const response = await fetch("/api/contact", {
+      const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       });
-      const result = (await response.json()) as { message?: string };
-
-      if (!response.ok) {
-        setStatus({
-          kind: "error",
-          message: result.message ?? "Your message could not be sent.",
-        });
-        return;
+      const data = (await res.json().catch(() => ({}))) as { message?: string };
+      if (res.ok) {
+        reset();
+        setStatus({ ok: true, text: data.message ?? "Thank you — your message has been sent." });
+      } else {
+        setStatus({ ok: false, text: data.message ?? "Something went wrong. Please try again." });
       }
-
-      form.reset();
-      setStatus({
-        kind: "success",
-        message: "Thanks for reaching out. I’ll be in touch soon.",
-      });
     } catch {
-      setStatus({
-        kind: "error",
-        message: "Something went wrong. Please try again or email me directly.",
-      });
-    } finally {
-      setSubmitting(false);
+      setStatus({ ok: false, text: "Network error. Please try again." });
     }
   }
 
   return (
-    <form className="contact-form" onSubmit={handleSubmit}>
+    <form className="form-card" onSubmit={handleSubmit(onSubmit)} noValidate>
+      {status && (
+        <div className={`alert ${status.ok ? "alert-ok" : "alert-error"}`} role={status.ok ? "status" : "alert"}>
+          {status.text}
+        </div>
+      )}
       <div className="form-row">
-        <label>
-          Your name
-          <input
-            autoComplete="name"
-            name="name"
-            placeholder="Jane Smith"
-            required
-            maxLength={100}
-          />
-        </label>
-        <label>
-          Email address
-          <input
-            autoComplete="email"
-            name="email"
-            placeholder="jane@company.com"
-            type="email"
-            required
-            maxLength={254}
-          />
-        </label>
+        <div className="field">
+          <label htmlFor="c-name">Name</label>
+          <input id="c-name" className="input" autoComplete="name" aria-invalid={!!errors.name} {...register("name")} />
+          {errors.name && <span className="field-error">{errors.name.message}</span>}
+        </div>
+        <div className="field">
+          <label htmlFor="c-email">Email</label>
+          <input id="c-email" type="email" className="input" autoComplete="email" aria-invalid={!!errors.email} {...register("email")} />
+          {errors.email && <span className="field-error">{errors.email.message}</span>}
+        </div>
       </div>
-      <label>
-        What would you like to talk about?
-        <textarea
-          name="message"
-          placeholder="A little about your project, role, or idea..."
-          rows={5}
-          required
-          minLength={10}
-          maxLength={5000}
-        />
-      </label>
-      <label className="honeypot" aria-hidden="true">
-        Leave this field empty
-        <input name="website" tabIndex={-1} autoComplete="off" />
-      </label>
-      <div className="form-submit-row">
-        <button
-          className="button button-dark"
-          type="submit"
-          disabled={submitting}
-        >
-          {submitting ? "Sending…" : "Send a message"}
-          {status?.kind === "success" ? (
-            <Check size={16} aria-hidden="true" />
-          ) : (
-            <Send size={15} aria-hidden="true" />
-          )}
-        </button>
-        <p className="form-privacy">
-          No spam, just a reply. Your details stay private.
-        </p>
+      <div className="field">
+        <label htmlFor="c-topic">Topic</label>
+        <select id="c-topic" className="select" {...register("topic")}>
+          {contactTopics.map((t) => (
+            <option key={t}>{t}</option>
+          ))}
+        </select>
       </div>
-      <p
-        className={`form-status${status ? ` is-${status.kind}` : ""}`}
-        role="status"
-        aria-live="polite"
-      >
-        {status?.message ?? ""}
-      </p>
-      <a className="form-fallback" href={`mailto:${email}`}>
-        Prefer email? Write to {email}{" "}
-        <ArrowUpRight size={14} aria-hidden="true" />
-      </a>
+      <div className="field">
+        <label htmlFor="c-message">Message</label>
+        <textarea id="c-message" className="textarea" rows={6} aria-invalid={!!errors.message} {...register("message")} />
+        {errors.message && <span className="field-error">{errors.message.message}</span>}
+      </div>
+      <div className="honeypot" aria-hidden="true">
+        <label htmlFor="c-website">Leave this empty</label>
+        <input id="c-website" tabIndex={-1} autoComplete="off" {...register("website")} />
+      </div>
+      <button className="btn btn-primary" type="submit" disabled={isSubmitting}>
+        <Send size={16} /> {isSubmitting ? "Sending…" : "Send message"}
+      </button>
     </form>
   );
 }

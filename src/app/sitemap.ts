@@ -1,19 +1,21 @@
 import type { MetadataRoute } from "next";
-import { profile, projects } from "@/data/portfolio";
+import { db } from "@/lib/db";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export const dynamic = "force-dynamic";
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const base = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const [pubs, projects] = await Promise.all([
+    db.publication.findMany({ where: { published: true }, select: { slug: true, updatedAt: true } }),
+    db.project.findMany({ where: { published: true }, select: { slug: true, updatedAt: true } }),
+  ]);
   return [
-    {
-      url: profile.siteUrl,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 1,
-    },
-    ...projects.map((project) => ({
-      url: `${profile.siteUrl}/projects/${project.slug}`,
-      lastModified: new Date(),
-      changeFrequency: "yearly" as const,
-      priority: 0.7,
+    ...["", "/about", "/research", "/publications", "/news", "/contact"].map((p) => ({
+      url: `${base}${p}`,
+      changeFrequency: "monthly" as const,
+      priority: p === "" ? 1 : 0.8,
     })),
+    ...pubs.map((p) => ({ url: `${base}/publications/${p.slug}`, lastModified: p.updatedAt, priority: 0.6 })),
+    ...projects.map((p) => ({ url: `${base}/research/${p.slug}`, lastModified: p.updatedAt, priority: 0.6 })),
   ];
 }

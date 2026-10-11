@@ -1,124 +1,75 @@
-﻿"use client";
+"use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { Menu, Moon, Sun, X } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { ArrowUpRight, Menu, Moon, Sun, X } from "lucide-react";
+import { useState, useSyncExternalStore } from "react";
 
 const links = [
-  { label: "About", href: "#about" },
-  { label: "Research", href: "#research" },
-  { label: "Publications", href: "#publications" },
-  { label: "News", href: "#news" },
-  { label: "Contact", href: "#contact" },
+  { href: "/", label: "Home" },
+  { href: "/about", label: "About" },
+  { href: "/research", label: "Research" },
+  { href: "/publications", label: "Publications" },
+  { href: "/news", label: "News" },
+  { href: "/contact", label: "Contact" },
 ];
 
-const subscribe = () => () => {};
-const getMountedSnapshot = () => true;
-const getServerSnapshot = () => false;
-
 export function SiteHeader({ name }: { name: string }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState("");
-  const mounted = useSyncExternalStore(
-    subscribe,
-    getMountedSnapshot,
-    getServerSnapshot,
-  );
+  const pathname = usePathname();
   const { resolvedTheme, setTheme } = useTheme();
-  const monogram = name
+  const [openAt, setOpenAt] = useState<string | null>(null);
+  const open = openAt === pathname;
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
+
+  const initials = name
+    .replace(/[^\p{L}\s]/gu, "")
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
-    .map((part) => part[0])
+    .map((p) => p[0])
     .join("")
-    .toLowerCase();
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible) setActiveSection(`#${visible.target.id}`);
-      },
-      { rootMargin: "-20% 0px -65% 0px" },
-    );
-
-    document
-      .querySelectorAll<HTMLElement>("main section[id]")
-      .forEach((section) => {
-        observer.observe(section);
-      });
-
-    return () => observer.disconnect();
-  }, []);
-
-  function closeMenu() {
-    setMenuOpen(false);
-  }
+    .toUpperCase();
 
   return (
     <header className="site-header">
-      <a className="wordmark" href="#home" aria-label={`${name} — home`}>
-        <span className="wordmark-mark" aria-hidden="true">
-          {monogram}.
-        </span>
-        <span className="wordmark-name">{name}</span>
-      </a>
-
-      <nav
-        className={`primary-nav${menuOpen ? "is-open" : ""}`}
-        id="main-navigation"
-        aria-label="Main navigation"
-      >
-        {links.map((link) => (
-          <a
-            className={
-              activeSection === link.href ? "nav-link is-active" : "nav-link"
-            }
-            href={link.href}
-            key={link.href}
-            onClick={closeMenu}
+      <div className="container header-inner">
+        <Link href="/" className="brand" aria-label={`${name} — home`}>
+          <span className="brand-mark" aria-hidden>
+            {initials || "A"}
+          </span>
+          <span>{name}</span>
+        </Link>
+        <nav id="primary-nav" className={`primary-nav${open ? " open" : ""}`} aria-label="Primary">
+          {links.map((l) => {
+            const active = l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
+            return (
+              <Link key={l.href} href={l.href} className="nav-link" aria-current={active ? "page" : undefined}>
+                {l.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="header-actions">
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Toggle dark mode"
+            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
           >
-            {link.label}
-          </a>
-        ))}
-        <a className="nav-availability" href="#contact" onClick={closeMenu}>
-          Let&apos;s talk <ArrowUpRight size={14} aria-hidden="true" />
-        </a>
-      </nav>
-
-      <div className="header-actions">
-        <button
-          className="icon-button theme-toggle"
-          type="button"
-          aria-label={
-            mounted && resolvedTheme === "dark"
-              ? "Switch to light mode"
-              : "Switch to dark mode"
-          }
-          onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-        >
-          {mounted && resolvedTheme === "dark" ? (
-            <Sun size={18} aria-hidden="true" />
-          ) : (
-            <Moon size={18} aria-hidden="true" />
-          )}
-        </button>
-        <button
-          className="icon-button menu-toggle"
-          type="button"
-          aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
-          aria-expanded={menuOpen}
-          aria-controls="main-navigation"
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          {menuOpen ? (
-            <X size={20} aria-hidden="true" />
-          ) : (
-            <Menu size={20} aria-hidden="true" />
-          )}
-        </button>
+            {mounted && resolvedTheme === "dark" ? <Sun size={19} /> : <Moon size={19} />}
+          </button>
+          <button
+            type="button"
+            className="icon-button menu-toggle"
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            aria-controls="primary-nav"
+            onClick={() => setOpenAt(open ? null : pathname)}
+          >
+            {open ? <X size={21} /> : <Menu size={21} />}
+          </button>
+        </div>
       </div>
     </header>
   );

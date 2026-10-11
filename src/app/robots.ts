@@ -1,9 +1,6 @@
 import type { MetadataRoute } from "next";
-import { profile } from "@/data/portfolio";
 
 export default function robots(): MetadataRoute.Robots {
-  return {
-    rules: { userAgent: "*", allow: "/" },
-    sitemap: `${profile.siteUrl}/sitemap.xml`,
-  };
+  const base = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  return { rules: { userAgent: "*", allow: "/", disallow: ["/admin", "/api"] }, sitemap: `${base}/sitemap.xml` };
 }
